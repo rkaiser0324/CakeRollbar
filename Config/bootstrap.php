@@ -8,31 +8,47 @@ App::import(
 App::uses('Rollbar', 'CakeRollbar.Vendor');
 
 /**
- * Configuration array loaded from ini config
+ * Configuration array loaded from APP/Config/private.php, with the format:
+ * 
+ * $config = [
+ *      ...
+ *      'Rollbar' => [
+ *          'access_token' => '7318e704865a47f1a92209cce4a544de',   // required
+ *          'environment' => 'development',                         // required
+ *          ...
+ *      ]
+ * ];
+ * 
+ * See rollbar.ini for documentation on the other options.
  */
-App::uses( 'IniReader', 'Configure' );
 Configure::config(
     'CakeRollbar', 
-    new IniReader(CakePlugin::path('CakeRollbar').DS.'Config'.DS.'rollbar')
+    new PhpReader(ROOT.DS.APP_DIR.DS.'Config'.DS.'private')
 );
 Configure::load('', 'CakeRollbar');
 $config = Configure::read('Rollbar');
 
-/**
- * Configures the user detection for the system
- * @return type
- */
-function rollbar_get_current_user() {
-    App::uses('AuthComponent', 'Controller/Component');
-    if (!is_null(AuthComponent::user())) {
+if (!function_exists('rollbar_get_current_user'))
+{
+    /**
+     * Configures the user detection for the system.  This function can be declared in APP/Config/bootstrap.php
+     * if you want to use different logic (e.g., your User model might not have a username field).
+     * 
+     * @return mixed
+     */
+    function rollbar_get_current_user() {
+        $retval = null;
+        App::uses('AuthComponent', 'Controller/Component');
         $user = AuthComponent::user();
-        return array(
-            'id' => $user['id'], // required - value is a string
-            'username' => $user['username'], // optional - value is a string
-            'email' => $user['email'] // optional - value is a string
-        );
+        if (!is_null($user)) {           
+            $retval = array(
+                'id' => $user['id'], // required - value is a string
+                'username' => $user['username'], // optional - value is a string
+                'email' => $user['email'] // optional - value is a string
+            );
+        }
+        return $retval;
     }
-    return null;
 }
 $config['person_fn'] = 'rollbar_get_current_user';
 

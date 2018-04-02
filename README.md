@@ -1,24 +1,27 @@
 CakeRollbar
 ===========
 
-Cake plugin to integrate with Rollbar service. []
+CakePHP 2.X plugin to integrate with the [Rollbar](https://rollbar.com) service.
 
-Instalation
------------
+Installation
+------------
 
-Include the plugin inside the  your project.
+1. Via Composer, include the plugin inside your project.
 
-Load the plugin from the bootstrap.php file.
+2. In `bootstrap.php`, load the plugin.  You can also declare `rollbar_get_current_user()` there if you don't want the default behavior.
+
 ```php
-CakePlugin::load('CakeRollbar', array('bootstrap' => true));
+CakePlugin::load('CakeRollbar', array(
+    'bootstrap' => true,
+    'path' => ROOT . DIRECTORY_SEPARATOR . APP_DIR . '/Vendor/rkaiser0324/CakeRollbar/'
+    ));
+
+/*
+function rollbar_get_current_user() {
+    // See bootstrap.php in the plugin for the return format.
+    return $retval;
+}
+*/
 ```
 
-Configuration
--------------
-
-Modify the file Config/rollbar.ini with all the possible values for the configuration neede. The bootstrap file  will load all the elemnets inside the configuration for the initialization asi is described in the documentation.
-Only is neede to setup the token key and review the function:
-```php
-rollbar_get_current_user() 
-```
-to handle th ser session to have the elment sneede to identify the current user.
+3. Update `APP/Config/private.php` with the settings for your Rollbar account.  See `bootstrap.php` in the plugin for the various options. 
