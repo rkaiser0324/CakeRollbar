@@ -8,7 +8,7 @@ Installation
 
 1. Via Composer, include the plugin inside your project.
 
-2. In `bootstrap.php`, load the plugin.  You can also declare `rollbar_get_current_user()` there if you don't want the default behavior.
+2. In `APP/Config/bootstrap.php`, load the plugin.  You can also declare `rollbar_get_current_user()` there if you don't want the default behavior.
 
 ```php
 CakePlugin::load('CakeRollbar', array(
