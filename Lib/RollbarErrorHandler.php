@@ -28,7 +28,7 @@ class RollbarErrorHandler extends ErrorHandler {
      * @param Exception $exception
      * @return type
      */
-    public static function handleException(Exception $exception) {
+    public static function handleException($exception) {
         Rollbar::report_exception($exception);
         return parent::handleException($exception);
     }
