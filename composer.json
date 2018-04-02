@@ -1,0 +1,14 @@
+{
+    "name": "rkaiser0324/CakeRollbar",
+    "type": "library",
+    "description": "CakePHP 2.X Rollbar integration, modified for bug fixes and deployment via composer.",
+    "keywords": ["cakephp", "rollbar"],
+    "homepage": "https://github.com/rkaiser0324/CakeRollbar",
+    "license": "GPL",
+    "authors": [
+        {"name": "Rolf Kaiser"}
+    ],
+    "require": {
+        "php": ">=5.3.2"
+    }
+}
