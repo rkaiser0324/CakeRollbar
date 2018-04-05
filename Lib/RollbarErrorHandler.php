@@ -1,5 +1,5 @@
 <?php
-App::uses('ErrorHandler', 'Lib');
+App::uses('ErrorHandler', 'Error');
 
 /**
  * Class to send all errors to the Rollbar handling
