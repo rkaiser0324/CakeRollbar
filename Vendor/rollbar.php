@@ -1,10 +1,12 @@
 <?php
+
 /**
  * Singleton-style wrapper around RollbarNotifier
  *
  * Unless you need multiple RollbarNotifier instances in the same project, use this.
  */
 class Rollbar {
+
     /** @var RollbarNotifier */
     public static $instance = null;
 
@@ -76,6 +78,7 @@ class Rollbar {
     public static function flush() {
         self::$instance->flush();
     }
+
 }
 
 // Send errors that have these levels
@@ -84,11 +87,11 @@ if (!defined('ROLLBAR_INCLUDED_ERRNO_BITMASK')) {
 }
 
 class RollbarNotifier {
+
     const VERSION = "0.15.0";
 
     // required
     public $access_token = '';
-
     // optional / defaults
     public $base_api_url = 'https://api.rollbar.com/api/1/';
     public $batch_size = 50;
@@ -102,6 +105,7 @@ class RollbarNotifier {
     public $handler = 'blocking';
     public $agent_log_location = '/var/tmp';
     public $host = null;
+
     /** @var iRollbarLogger */
     public $logger = null;
     public $included_errno = ROLLBAR_INCLUDED_ERRNO_BITMASK;
@@ -115,27 +119,20 @@ class RollbarNotifier {
     public $report_suppressed = false;
     public $use_error_reporting = false;
     public $proxy = null;
-
     private $config_keys = array('access_token', 'base_api_url', 'batch_size', 'batched', 'branch',
         'capture_error_backtraces', 'code_version', 'environment', 'error_sample_rates', 'handler',
         'agent_log_location', 'host', 'logger', 'included_errno', 'person', 'person_fn', 'root',
         'scrub_fields', 'shift_function', 'timeout', 'report_suppressed', 'use_error_reporting', 'proxy');
-
     // cached values for request/server/person data
     private $_request_data = null;
     private $_server_data = null;
     private $_person_data = null;
-
     // payload queue, used when $batched is true
     private $_queue = array();
-
     // file handle for agent log
     private $_agent_log = null;
-
     private $_iconv_available = null;
-
     private $_mt_randmax;
-
     private $_curl_ipresolve_supported;
 
     public function __construct($config) {
@@ -420,18 +417,25 @@ class RollbarNotifier {
         $data = $this->build_base_data();
         $data['level'] = strtolower($level);
 
-        $message_obj = array('body' => $message);
-        if ($extra_data !== null && is_array($extra_data)) {
-            // merge keys from $extra_data to $message_obj
-            foreach ($extra_data as $key => $val) {
-                if ($key == 'body') {
-                    // rename to 'body_' to avoid clobbering
-                    $key = 'body_';
-                }
-                $message_obj[$key] = $val;
-            }
+        // Like in _report_php_error(), build something that looks like an exception
+        $data['body'] = array(
+            'trace' => array(
+                'frames' => [],
+                'exception' => array(
+                    'class' => $message
+                )
+            )
+        );
+        
+        $backtrace = array_reverse(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS));
+        for ($i = 0; $i < count($backtrace); $i++) {
+            if (!empty($backtrace[$i]['file']) && !preg_match('@rkaiser0324/CakeRollbar@', $backtrace[$i]['file']))
+                $data['body']['trace']['frames'][] = [
+                    'filename' => $backtrace[$i]['file'],
+                    'lineno' => $backtrace[$i]['line'],
+                    'method' => $backtrace[$i]['function']
+                ];
         }
-        $data['body']['message'] = $message_obj;
 
         $data['request'] = $this->build_request_data();
         $data['server'] = $this->build_server_data();
@@ -483,7 +487,8 @@ class RollbarNotifier {
 
     protected function scrub_url($url) {
         $url_query = parse_url($url, PHP_URL_QUERY);
-        if (!$url_query) return $url;
+        if (!$url_query)
+            return $url;
         parse_str($url_query, $parsed_output);
         // using x since * requires URL-encoding
         $scrubbed_params = $this->scrub_request_params($parsed_output, 'x');
@@ -511,9 +516,11 @@ class RollbarNotifier {
     }
 
     protected function _key_should_be_scrubbed($key, $potential_regex_filters) {
-        if (in_array(strtolower($key), $this->scrub_fields, true)) return true;
+        if (in_array(strtolower($key), $this->scrub_fields, true))
+            return true;
         foreach ($potential_regex_filters as $potential_regex) {
-            if (@preg_match($potential_regex, $key)) return true;
+            if (@preg_match($potential_regex, $key))
+                return true;
         }
         return false;
     }
@@ -608,8 +615,7 @@ class RollbarNotifier {
      * @param mixed $extra_data
      * @return array
      */
-    protected function build_exception_trace(Exception $exc, $extra_data = null)
-    {
+    protected function build_exception_trace(Exception $exc, $extra_data = null) {
         $message = $exc->getMessage();
 
         $trace = array(
@@ -632,8 +638,7 @@ class RollbarNotifier {
      * @param array $extra_data
      * @return array
      */
-    protected function build_exception_trace_chain(Exception $exc, $extra_data = null)
-    {
+    protected function build_exception_trace_chain(Exception $exc, $extra_data = null) {
         $chain = array();
         $chain[] = $this->build_exception_trace($exc, $extra_data);
 
@@ -657,9 +662,9 @@ class RollbarNotifier {
         foreach ($exc->getTrace() as $frame) {
             $frames[] = array(
                 'filename' => isset($frame['file']) ? $frame['file'] : '<internal>',
-                'lineno' =>  isset($frame['line']) ? $frame['line'] : 0,
+                'lineno' => isset($frame['line']) ? $frame['line'] : 0,
                 'method' => $frame['function']
-                // TODO include args? need to sanitize first.
+                    // TODO include args? need to sanitize first.
             );
         }
 
@@ -706,7 +711,7 @@ class RollbarNotifier {
                     // Sometimes, file and line are not set. See:
                     // http://stackoverflow.com/questions/4581969/why-is-debug-backtrace-not-including-line-number-sometimes
                     'filename' => isset($frame['file']) ? $frame['file'] : "<internal>",
-                    'lineno' =>  isset($frame['line']) ? $frame['line'] : 0,
+                    'lineno' => isset($frame['line']) ? $frame['line'] : 0,
                     'method' => $frame['function']
                 );
             }
@@ -721,7 +726,6 @@ class RollbarNotifier {
             );
 
             $this->shift_method($frames);
-
             return $frames;
         } else {
             return array(
@@ -813,7 +817,7 @@ class RollbarNotifier {
         );
 
         if ($this->access_token) {
-          $payload['access_token'] = $this->access_token;
+            $payload['access_token'] = $this->access_token;
         }
 
         return $payload;
@@ -919,7 +923,7 @@ class RollbarNotifier {
         }
 
         if ($this->_curl_ipresolve_supported) {
-          curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         }
 
         $result = curl_exec($ch);
@@ -928,8 +932,8 @@ class RollbarNotifier {
 
         if ($status_code != 200) {
             $this->log_warning('Got unexpected status code from Rollbar API ' . $action .
-                ': ' .$status_code);
-            $this->log_warning('Output: ' .$result);
+                    ': ' . $status_code);
+            $this->log_warning('Output: ' . $result);
         } else {
             $this->log_info('Success');
         }
@@ -959,33 +963,33 @@ class RollbarNotifier {
     protected function uuid4() {
         mt_srand();
         return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            // 32 bits for "time_low"
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-
-            // 16 bits for "time_mid"
-            mt_rand(0, 0xffff),
-
-            // 16 bits for "time_hi_and_version",
-            // four most significant bits holds version number 4
-            mt_rand(0, 0x0fff) | 0x4000,
-
-            // 16 bits, 8 bits for "clk_seq_hi_res",
-            // 8 bits for "clk_seq_low",
-            // two most significant bits holds zero and one for variant DCE1.1
-            mt_rand(0, 0x3fff) | 0x8000,
-
-            // 48 bits for "node"
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+                // 32 bits for "time_low"
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+                // 16 bits for "time_mid"
+                mt_rand(0, 0xffff),
+                // 16 bits for "time_hi_and_version",
+                // four most significant bits holds version number 4
+                mt_rand(0, 0x0fff) | 0x4000,
+                // 16 bits, 8 bits for "clk_seq_hi_res",
+                // 8 bits for "clk_seq_low",
+                // two most significant bits holds zero and one for variant DCE1.1
+                mt_rand(0, 0x3fff) | 0x8000,
+                // 48 bits for "node"
+                mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
         );
     }
 
     protected function load_agent_file() {
         $this->_agent_log = fopen($this->agent_log_location . '/rollbar-relay.' . getmypid() . '.' . microtime(true) . '.rollbar', 'a');
     }
+
 }
 
 interface iRollbarLogger {
+
     public function log($level, $msg);
 }
 
-class Ratchetio extends Rollbar {}
+class Ratchetio extends Rollbar {
+    
+}
